@@ -2,7 +2,6 @@ import 'dart:math';
 import 'package:english_words/english_words.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'dart:developer' as developer;
 
@@ -51,8 +50,14 @@ class MyAppState extends ChangeNotifier {
   void toggleFavorite() {
     if (favorites.contains(current)) {
       favorites.remove(current);
+      if (kDebugMode) {
+        developer.log('desfavoritou: $current');
+      }
     } else {
       favorites.add(current);
+      if (kDebugMode) {
+        developer.log('favoritou: $current');
+      }
     }
     notifyListeners();
   }
@@ -74,48 +79,46 @@ class _MyHomePageState extends State<MyHomePage> {
         page = GeneratorPage();
         break;
       case 1:
-        page = Placeholder();
+        page = FavoritesPage();
         break;
       default:
         throw UnimplementedError('no widget for $selectedIndex');
     }
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Scaffold(
-          body: Row(
-            children: [
-              SafeArea(
-                child: NavigationRail(
-                  extended: constraints.maxWidth >= 600,
-                  destinations: [
-                    NavigationRailDestination(
-                      icon: Icon(Icons.home),
-                      label: Text('Home'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.favorite),
-                      label: Text('Favorites'),
-                    ),
-                  ],
-                  selectedIndex: selectedIndex,
-                  onDestinationSelected: (value) {
-                    setState(() {
-                      selectedIndex = value;
-                    });
-                  },
-                ),
+    return LayoutBuilder(builder: (context, constraints) {
+      return Scaffold(
+        body: Row(
+          children: [
+            SafeArea(
+              child: NavigationRail(
+                extended: constraints.maxWidth >= 600,
+                destinations: [
+                  NavigationRailDestination(
+                    icon: Icon(Icons.home),
+                    label: Text('Home'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.favorite),
+                    label: Text('Favoritos'),
+                  ),
+                ],
+                selectedIndex: selectedIndex,
+                onDestinationSelected: (value) {
+                  setState(() {
+                    selectedIndex = value;
+                  });
+                },
               ),
-              Expanded(
-                child: Container(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  child: page,
-                ),
+            ),
+            Expanded(
+              child: Container(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                child: page,
               ),
-            ],
-          ),
-        );
-      }
-    );
+            ),
+          ],
+        ),
+      );
+    });
   }
 }
 
@@ -170,6 +173,51 @@ class GeneratorPage extends StatelessWidget {
   }
 }
 
+// show the list of favorites in a new stateless widget, FavoritesPage
+class FavoritesPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    var appState = context.watch<MyAppState>();
+
+    if (appState.favorites.isEmpty) {
+      return Center(
+        child: Text('Você ainda não tem nenhum favorito'),
+      );
+    }
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Text('Você tem ${appState.favorites.length} favoritos'),
+          ],
+        ),
+        Expanded(
+          child: CustomScrollView(
+            // Use CustomScrollView
+            slivers: [
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    return ListTile(
+                      leading: Icon(Icons.favorite),
+                      title: Text(appState.favorites[index].asPascalCase),
+                    );
+                  },
+                  childCount: appState.favorites.length,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
+  }
+}
+
+// create a new stateless widget, BigCard, to display the word pair in a larger font size and with a background color
+
 class BigCard extends StatelessWidget {
   const BigCard({
     super.key,
@@ -186,9 +234,6 @@ class BigCard extends StatelessWidget {
     final style = theme.textTheme.displayMedium!.copyWith(
       color: theme.colorScheme.onPrimary,
     );
-    if (kDebugMode) {
-      developer.log('semanticsLabel: ${pair.first} ${pair.second}');
-    }
     return Card(
       color: color,
       elevation: 8,
